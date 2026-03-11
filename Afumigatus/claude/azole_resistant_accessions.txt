@@ -1,0 +1,7 @@
+# Azole-Resistant Aspergillus fumigatus SRA Accessions
+# Source: PRJEB60964 crossed with Simmons et al. (2023) Table A5 resistance data
+# Resistance marker: TR34/L98H
+
+ERR14230100
+ERR14230103
+ERR14230105
