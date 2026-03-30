@@ -1,5 +1,6 @@
 # Retrieve variants associated with the cyp51A gene. 
 
+
 ## Goal
 
 Create GFF3 of variant data falling around the cyp51A gene. This gene is known by identifier Afu4g06890.
@@ -54,3 +55,70 @@ Cell In[1], line 56
     gff_lines = ["##gff-version 3
                  ^
 SyntaxError: unterminated string literal (detected at line 56)
+
+## Iteration 7
+
+- There is a problem with the tandem repeat section of the code. In the current dataset, there are 3 samples with a tandem repeat, so there should be 3 lines in the gff that correspond to them. There are actaully 9 gff lines, three of which (the "repeat_region" lines)  are not even valid GFF3. The script should be modified to only have one line of GFF per tandem repeat
+
+## Iteration 8
+
+- The notebook throws this error:
+---------------------------------------------------------------------------
+Exception                                 Traceback (most recent call last)
+Cell In[1], line 91
+     88                     gff_lines.append(f"{chrom}\t{sra_accession}\tSNP\t{pos}\t{pos}\t.\t.\t.\t{attr}\n")
+     90 print("Processing etandem outputs...")
+---> 91 all_etandem = await gxy.get(".*etandem on dataset.*", identifier_type="regex")
+     92 if not isinstance(all_etandem, list): all_etandem = [all_etandem]
+     94 global_offset = 1777374 - 1
+
+File /lib/python3.12/site-packages/gxy/__init__.py:93, in get(datasets_identifiers, identifier_type, history_id, retrieve_datatype)
+     91 datatypes_all = []
+     92 for ds in datasets:
+---> 93     path = await _download_dataset(ds)
+     94     file_path_all.append(path)
+     95     if retrieve_datatype:
+
+File /lib/python3.12/site-packages/gxy/__init__.py:232, in _download_dataset(dataset)
+    230 response = await fetch(url)
+    231 if not response.ok:
+--> 232     raise Exception(f"Failed to fetch dataset {dataset_id}: {response.status}")
+    233 buffer = await response.arrayBuffer()
+    234 data = bytes(bytearray(buffer.to_py()))
+
+Exception: Failed to fetch dataset f9cad7b01a472135982e04d23fbd7161: 400
+
+I suspect that is because of the regex looking for *etandem on dataset.* since etandem was run on a *collection* not a single dataset. 
+
+## Iteration 10
+
+- Fix this error:
+
+KeyError                                  Traceback (most recent call last)
+Cell In[1], line 59
+     56 print(f"Built mapping for {len(mapping)} dataset elements.")
+     58 print("Processing SNPeff VCFs...")
+---> 59 all_snpeff = await gxy.get(".*SnpEff eff: on collection.*", identifier_type="regex")
+     60 if not isinstance(all_snpeff, list): all_snpeff = [all_snpeff]
+     62 gff_lines = ["##gff-version 3\n"]
+
+File /lib/python3.12/site-packages/gxy/__init__.py:93, in get(datasets_identifiers, identifier_type, history_id, retrieve_datatype)
+     91 datatypes_all = []
+     92 for ds in datasets:
+---> 93     path = await _download_dataset(ds)
+     94     file_path_all.append(path)
+     95     if retrieve_datatype:
+
+File /lib/python3.12/site-packages/gxy/__init__.py:217, in _download_dataset(dataset)
+    207 """
+    208 Given a dataset object, its content is downloaded from Galaxy and stored in Pyodide’s virtual filesystem.
+    209 
+   (...)
+    214     String path of stored file
+    215 """
+    216 dataset_id = dataset['id']
+--> 217 extension = dataset['extension']
+    218 hid = dataset['hid']
+    219 history_content_type = dataset["history_content_type"]
+
+KeyError: 'extension'

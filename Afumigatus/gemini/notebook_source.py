@@ -28,7 +28,7 @@ print(f"Target Gene cyp51A: {cyp51a_chr}:{cyp51a_start}-{cyp51a_end}")
 
 print("Building SRA accession mapping from dataset collections...")
 history_id = await gxy.get_history_id()
-contents = await gxy.api(f"/api/histories/{history_id}/contents?v=dev&keys=type,name,collection_id")
+contents = await gxy.api(f"/api/histories/{history_id}/contents?v=dev&keys=type,name,collection_id,deleted")
 
 mapping = {}
 for item in contents:
@@ -56,7 +56,16 @@ for item in contents:
 print(f"Built mapping for {len(mapping)} dataset elements.")
 
 print("Processing SNPeff VCFs...")
-all_snpeff = await gxy.get(".*SnpEff eff: on dataset.*", identifier_type="regex")
+snpeff_ids = [d['id'] for d in contents if d.get('history_content_type') == 'dataset' and not d.get('deleted') and 'SnpEff eff: on dataset' in d.get('name', '') and 'HTML' not in d.get('name', '')]
+all_snpeff = []
+for ds_id in snpeff_ids:
+    try:
+        p = await gxy.get(ds_id, identifier_type="id")
+        if isinstance(p, list): all_snpeff.extend(p)
+        else: all_snpeff.append(p)
+    except Exception as e:
+        print(f"Skipping SNPeff {ds_id}: {e}")
+
 if not isinstance(all_snpeff, list): all_snpeff = [all_snpeff]
 
 gff_lines = ["##gff-version 3\n"]
@@ -88,7 +97,16 @@ for p in all_snpeff:
                     gff_lines.append(f"{chrom}\t{sra_accession}\tSNP\t{pos}\t{pos}\t.\t.\t.\t{attr}\n")
 
 print("Processing etandem outputs...")
-all_etandem = await gxy.get(".*etandem on dataset.*", identifier_type="regex")
+etandem_ids = [d['id'] for d in contents if d.get('history_content_type') == 'dataset' and not d.get('deleted') and 'etandem on dataset' in d.get('name', '')]
+all_etandem = []
+for ds_id in etandem_ids:
+    try:
+        p = await gxy.get(ds_id, identifier_type="id")
+        if isinstance(p, list): all_etandem.extend(p)
+        else: all_etandem.append(p)
+    except Exception as e:
+        print(f"Skipping etandem {ds_id}: {e}")
+
 if not isinstance(all_etandem, list): all_etandem = [all_etandem]
 
 global_offset = 1777374 - 1
@@ -123,6 +141,8 @@ for p in all_etandem:
             if is_gff:
                 vparts = line.split('\t')
                 if len(vparts) >= 9:
+                    if vparts[2] != 'tandem_repeat':
+                        continue
                     local_start = int(vparts[3])
                     local_end = int(vparts[4])
                     
