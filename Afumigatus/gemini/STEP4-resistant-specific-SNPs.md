@@ -55,3 +55,6 @@ Cell In[1], line 112
             ^
 SyntaxError: unterminated string literal (detected at line 112)
 
+## Iteration 6
+
+- The calculations in the jupyterlite notebook appear to be correct. Now add to the comments in the final VCF file that indicate the total number of variants in the susceptible and resistant datasets
